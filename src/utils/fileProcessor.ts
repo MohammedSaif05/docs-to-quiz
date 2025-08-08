@@ -1,8 +1,11 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
 
-// Set up PDF.js worker - use a more reliable CDN
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+// Configure PDF.js worker for Vite - use local worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url
+).toString();
 
 export const extractTextFromFile = async (file: File): Promise<string> => {
   const fileType = file.type;
