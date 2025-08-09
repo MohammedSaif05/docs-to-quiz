@@ -1,5 +1,10 @@
-import { PDFDocument } from 'pdf-lib';
 import mammoth from 'mammoth';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
+import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+// Configure the PDF.js worker
+GlobalWorkerOptions.workerSrc = pdfjsWorker as unknown as string;
 
 export const extractTextFromFile = async (file: File): Promise<string> => {
   const fileType = file.type;
@@ -24,41 +29,38 @@ export const extractTextFromFile = async (file: File): Promise<string> => {
   }
 };
 
+function isTextItem(item: unknown): item is TextItem {
+  return typeof item === 'object' && item !== null && 'str' in (item as Record<string, unknown>);
+}
+
 const extractTextFromPDF = async (file: File): Promise<string> => {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(arrayBuffer);
-    
-    // Note: pdf-lib doesn't have built-in text extraction
-    // For a simpler approach, let's use a different method
-    const form = pdfDoc.getForm();
-    const fields = form.getFields();
-    
-    let extractedText = '';
-    fields.forEach(field => {
-      if (field.constructor.name === 'PDFTextField') {
-        const textField = field as any;
-        extractedText += textField.getText() + ' ';
-      }
-    });
-    
-    // If no form fields found, return basic info
-    if (!extractedText.trim()) {
-      const pageCount = pdfDoc.getPageCount();
-      extractedText = `PDF document with ${pageCount} pages. `;
-      
-      // Try to extract any embedded text (limited with pdf-lib)
-      for (let i = 0; i < Math.min(pageCount, 5); i++) {
-        const page = pdfDoc.getPage(i);
-        const { width, height } = page.getSize();
-        extractedText += `Page ${i + 1} content (${width}x${height}). `;
+
+    // Load PDF with pdfjs-dist
+    const loadingTask = getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+
+    const numPages: number = pdf.numPages;
+    const pageTexts: string[] = [];
+
+    for (let pageNum = 1; pageNum <= numPages; pageNum += 1) {
+      const page = await pdf.getPage(pageNum);
+      const textContent: TextContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item) => (isTextItem(item) ? item.str : ''))
+        .filter(Boolean)
+        .join(' ');
+      if (pageText.trim()) {
+        pageTexts.push(pageText.trim());
       }
     }
-    
-    return extractedText.trim() || 'PDF content extracted successfully but no readable text found.';
+
+    const combined = pageTexts.join('\n\n');
+    return combined || 'No readable text found in PDF.';
   } catch (error) {
     console.error('PDF extraction error:', error);
-    throw new Error('Failed to process PDF file. Please try converting it to a text file first.');
+    throw new Error('Failed to process PDF file. Try another PDF or convert to DOCX/TXT.');
   }
 };
 
