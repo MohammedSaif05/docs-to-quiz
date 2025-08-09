@@ -681,11 +681,11 @@ ${contentSource}
           </h2>
           
           {inputType === 'file' ? (
-          <FileUpload
-            onFileSelect={setSelectedFile}
-            selectedFile={selectedFile}
-            onClearFile={() => setSelectedFile(null)}
-          />
+            <FileUpload
+              onFileSelect={setSelectedFile}
+              selectedFile={selectedFile}
+              onClearFile={() => setSelectedFile(null)}
+            />
           ) : inputType === 'web' ? (
             <Card className="shadow-card transition-smooth">
               <CardContent className="space-y-4 pt-6">
@@ -753,14 +753,15 @@ ${contentSource}
           )}
         </div>
 
-        {/* Quiz Settings */}
-        <div className="space-y-3">
-          <h2 className="text-2xl font-semibold text-foreground">Configure Quiz</h2>
-          <QuizSettings
-            settings={settings}
-            onSettingsChange={setSettings}
-          />
-        </div>
+        {inputType !== 'voice' && (
+          <div className="space-y-3">
+            <h2 className="text-2xl font-semibold text-foreground">Configure Quiz</h2>
+            <QuizSettings
+              settings={settings}
+              onSettingsChange={setSettings}
+            />
+          </div>
+        )}
 
         {/* Generate Button */}
         <div className="flex justify-center pt-4">
